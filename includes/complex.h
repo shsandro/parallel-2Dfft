@@ -8,11 +8,11 @@
 Input: complex number c, complex number c2
 Result: complex number c = c * c2
 */
-#define mul_complex_self(c, c2)           \
-    do {                                  \
-        double ca = c->a;                 \
-        c->a = ca * c2->a - c->b * c2->b; \
-        c->b = c->b * c2->a + ca * c2->b; \
+#define mul_complex_self(c, c2)       \
+    do {                              \
+        double ca = c.a;              \
+        c.a = ca * c2.a - c.b * c2.b; \
+        c.b = c.b * c2.a + ca * c2.b; \
     } while (0)
 
 /* Complex number: z = a + bi */
