@@ -1,6 +1,7 @@
 #include "./includes/complex.h"
 
 #include <math.h>
+#include <stdio.h>
 
 /*
 Input: real part a, imaginary part b
@@ -48,3 +49,20 @@ complex euler_formula(double x) {
     complex z = {.a = cos(x), .b = sin(x)};
     return z;
 }
+
+/*
+Input: complex* a, complex* b
+*/
+void swap(complex* a, complex* b) {
+    complex aux = *a;
+
+    *a = *b;
+    *b = aux;
+}
+
+/*
+Description: prints a complex number
+Input: complex number z = a +bi
+Result: prints z in the format a + bi
+*/
+void print_complex(complex z) { printf("%.6f + %.6f i\n", z.a, z.b); }

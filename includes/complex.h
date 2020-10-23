@@ -51,4 +51,16 @@ Output: complex number z = e^ix = cos(x) + i sin(x)
 */
 complex euler_formula(double x);
 
+/*
+Input: complex* a, complex* b
+*/
+void swap(complex* a, complex* b);
+
+/*
+Description: prints a complex number
+Input: complex number z = a +bi
+Result: prints z in the format a + bi
+*/
+void print_complex(complex z);
+
 #endif
