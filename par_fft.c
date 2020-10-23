@@ -5,29 +5,6 @@
 #include "./includes/complex.h"
 
 /*
-Description: operates the Discrete Fourier Transform
-Input: discrete time signal *sig
-       discrete frequency signal *f
-       length N
-Result: f* constains the Discrete Fourier Transform of *sig
-*/
-void dft(const complex *sig, complex *f, int N) {
-    complex e = euler_formula(2 * -PI / (double)N);
-    complex wi = {.a = 1, .b = 0};
-    complex wj = {.a = 1, .b = 0};
-
-    for (int i = 0; i < N; i++) {
-        f[i] = create_complex(0, 0);
-
-        for (int j = 0; j < N; j++) {
-            f[i] = add_complex(f[i], mul_complex(sig[j], wj));
-            mul_complex_self(wj, wi);
-        }
-        mul_complex_self(wi, e);
-    }
-}
-
-/*
 Description: operates the Fast Fourier Transform
 Input: discrete time signal *sig
        discrete frequency signal *f
@@ -58,13 +35,6 @@ void fft(const complex *sig, complex *f, int s, int N) {
 }
 
 /*
-Description: prints a complex number
-Input: complex number z = a +bi
-Result: prints z in the format a + bi
-*/
-void print_complex(complex z) { printf("%.6f + %.6f i\n", z.a, z.b); }
-
-/*
 Output: returns current clock time
 */
 double now() {
@@ -74,6 +44,13 @@ double now() {
     clock_gettime(CLOCK_REALTIME, &current_time);
 
     return current_time.tv_sec + (current_time.tv_nsec / ONE_BILLION);
+}
+
+void par_fft(complex *sig, complex *f, int N) {
+    int n_sqrt = sqrt(N);
+
+    complex(*par_f)[n_sqrt] = f;
+    complex(*par_sig)[n_sqrt] = sig;
 }
 
 int main() {
@@ -94,7 +71,7 @@ int main() {
     // printf("## Antes ##\n");
     // for (i = 0; i < n; i++) print_complex(sig[i]);
     // printf("#####################\n");
-    fft(sig, f, 1, n);
+    par_fft(sig, f, n);
     // printf("## Depois ##\n");
     // for (i = 0; i < n; i++) print_complex(f[i]);
 
