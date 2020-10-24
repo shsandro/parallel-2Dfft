@@ -35,12 +35,12 @@ Input: discrete time signal *sig
 Result: f* constains the Discrete Fourier Transform of *sig
 */
 void fft(const complex *sig, complex *f, int s, int N) {
-    int i, hn = N >> 1;
-    complex ep = euler_formula(-PI / (double)hn), ei;
-    complex *pi = &ei, *pp = &ep;
-    if (!hn)
+    if (N == 1) {
         *f = *sig;
-    else {
+    } else {
+        complex ep = euler_formula(2 * -PI / (double)N), ei;
+        complex *pi = &ei, *pp = &ep;
+        int i, hn = N >> 1;
         fft(sig, f, s << 1, hn);
         fft(sig + s, f + hn, s << 1, hn);
         pi->a = 1;
@@ -57,12 +57,44 @@ void fft(const complex *sig, complex *f, int s, int N) {
     }
 }
 
-/*
-Description: prints a complex number
-Input: complex number z = a +bi
-Result: prints z in the format a + bi
-*/
-void print_complex(complex z) { printf("%.6f + %.6f i\n", z.a, z.b); }
+void transpose(complex *vec_matrix, int N) {
+    complex(*matrix)[N] = vec_matrix;
+
+    for (int i = 0; i < N; i++) {
+        for (int j = i + 1; j < N; j++) {
+            swap(&matrix[i][j], &matrix[j][i]);
+        }
+    }
+}
+
+void _2dfft(complex *sig, complex *f, int N) {
+    int n_sqrt = sqrt(N);
+
+    complex(*par_f)[n_sqrt] = f;
+    complex(*par_sig)[n_sqrt] = sig;
+
+    printf("\nTranspondo sinal de entrada...\n");
+    transpose(sig, n_sqrt);
+
+    printf("\nCalculando FFT das colunas...\n");
+    for (int i = 0; i < n_sqrt; i++) {
+        fft(par_sig[i], par_f[i], 1, n_sqrt);
+    }
+
+    printf("\n## F ##\n");
+    for (int i = 0; i < N; i++) print_complex(f[i]);
+
+    printf("\nTranspondo matriz resultante...\n");
+    transpose(f, n_sqrt);
+
+    printf("\nCalculando FFT das linhas...\n");
+    for (int i = 0; i < n_sqrt; i++) {
+        fft(par_f[i], par_sig[i], 1, n_sqrt);
+    }
+
+    printf("\n## SEQ ##\n");
+    for (int i = 0; i < N; i++) print_complex(sig[i]);
+}
 
 /*
 Output: returns current clock time
@@ -78,25 +110,25 @@ double now() {
 
 int main() {
     int n, i, k;
-    complex *sig, *f;
+    complex *sig, *f, *f_seq;
 
     scanf("%d", &k);
 
     n = 1 << k;
-    sig = (complex *)malloc(sizeof(complex) * (size_t)n);
-    f = (complex *)malloc(sizeof(complex) * (size_t)n);
+    sig = (complex *)calloc(sizeof(complex), (size_t)n);
+    f = (complex *)calloc(sizeof(complex), (size_t)n);
 
     for (i = 0; i < n; i++) {
         sig[i].a = rand() % 10;
         sig[i].b = 0;
     }
 
-    // printf("## Antes ##\n");
-    // for (i = 0; i < n; i++) print_complex(sig[i]);
-    // printf("#####################\n");
-    fft(sig, f, 1, n);
-    // printf("## Depois ##\n");
-    // for (i = 0; i < n; i++) print_complex(f[i]);
+    printf("## Sinal de entrada ##\n");
+    for (i = 0; i < n; i++) print_complex(sig[i]);
+
+    _2dfft(sig, f, n);
+
+    return 0;
 
     return 0;
 }
