@@ -1,6 +1,8 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "./includes/complex.h"
 
@@ -67,33 +69,21 @@ void transpose(complex *vec_matrix, int N) {
     }
 }
 
-void _2dfft(complex *sig, complex *f, int N) {
-    int n_sqrt = sqrt(N);
+void _2dfft(complex *sig, complex *f, int n) {
+    complex(*par_f)[n] = f;
+    complex(*par_sig)[n] = sig;
 
-    complex(*par_f)[n_sqrt] = f;
-    complex(*par_sig)[n_sqrt] = sig;
+    transpose(sig, n);
 
-    printf("\nTranspondo sinal de entrada...\n");
-    transpose(sig, n_sqrt);
-
-    printf("\nCalculando FFT das colunas...\n");
-    for (int i = 0; i < n_sqrt; i++) {
-        fft(par_sig[i], par_f[i], 1, n_sqrt);
+    for (int i = 0; i < n; i++) {
+        fft(par_sig[i], par_f[i], 1, n);
     }
 
-    printf("\n## F ##\n");
-    for (int i = 0; i < N; i++) print_complex(f[i]);
+    transpose(f, n);
 
-    printf("\nTranspondo matriz resultante...\n");
-    transpose(f, n_sqrt);
-
-    printf("\nCalculando FFT das linhas...\n");
-    for (int i = 0; i < n_sqrt; i++) {
-        fft(par_f[i], par_sig[i], 1, n_sqrt);
+    for (int i = 0; i < n; i++) {
+        fft(par_f[i], par_sig[i], 1, n);
     }
-
-    printf("\n## SEQ ##\n");
-    for (int i = 0; i < N; i++) print_complex(sig[i]);
 }
 
 /*
@@ -108,27 +98,42 @@ double now() {
     return current_time.tv_sec + (current_time.tv_nsec / ONE_BILLION);
 }
 
-int main() {
-    int n, i, k;
+void help_menu() {}
+
+int main(int argc, char **argv) {
+    int n, k, ch;
     complex *sig, *f, *f_seq;
+    double start_time, end_time;
 
-    scanf("%d", &k);
+    while ((ch = getopt(argc, argv, "n:h")) != -1) {
+        switch (ch) {
+            case 'n':
+                n = atoi(optarg);
+                break;
 
-    n = 1 << k;
-    sig = (complex *)calloc(sizeof(complex), (size_t)n);
-    f = (complex *)calloc(sizeof(complex), (size_t)n);
+            case 'h':
+            default:
+                help_menu();
+                exit(1);
+                break;
+        }
+    }
 
-    for (i = 0; i < n; i++) {
+    int total_size = n * n;
+    sig = (complex *)calloc(sizeof(complex), (size_t)total_size);
+    f = (complex *)calloc(sizeof(complex), (size_t)total_size);
+
+    for (int i = 0; i < total_size; i++) {
         sig[i].a = rand() % 10;
         sig[i].b = 0;
     }
-
-    printf("## Sinal de entrada ##\n");
-    for (i = 0; i < n; i++) print_complex(sig[i]);
-
+    start_time = now();
     _2dfft(sig, f, n);
+    end_time = now();
 
-    return 0;
+    // for (int i = 0; i < total_size; i++) print_complex(sig[i]);
+
+    printf("Time elapsed: %lf\n", end_time - start_time);
 
     return 0;
 }
