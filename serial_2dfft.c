@@ -98,7 +98,12 @@ double now() {
     return current_time.tv_sec + (current_time.tv_nsec / ONE_BILLION);
 }
 
-void help_menu() {}
+void help_menu() {
+    printf("Usage: %s [flags]\n", prog_name);
+    printf("    -h               prints this usage guide\n");
+    printf(
+        "    -n <number> generate random a matrix of size number x number\n");
+}
 
 int main(int argc, char **argv) {
     int n, k, ch;

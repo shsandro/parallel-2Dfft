@@ -72,7 +72,12 @@ void par_2dfft(complex *sig, complex *f, int n, int rows) {
     }
 }
 
-void help_menu() {}
+void help_menu() {
+    printf("Usage: %s [flags]\n", prog_name);
+    printf("    -h               prints this usage guide\n");
+    printf(
+        "    -n <number> generate random a matrix of size number x number\n");
+}
 
 int main(int argc, char **argv) {
     int numtasks = 1,  /* number of tasks in partition */
@@ -206,7 +211,7 @@ int main(int argc, char **argv) {
 
         par_2dfft(f, sig, n, rows);
 
-                MPI_Send(sig, rows * n * 2, MPI_DOUBLE, MASTER, FROM_WORKER,
+        MPI_Send(sig, rows * n * 2, MPI_DOUBLE, MASTER, FROM_WORKER,
                  MPI_COMM_WORLD);
     }
 
