@@ -22,8 +22,8 @@ do
    esac
 done
 
-seq_executable="seq_fft.out"
-par_executable="par_fft.out"
+seq_executable="seq_2dfft.out"
+par_executable="par_2dfft.out"
 sizes=(1000 2000 4000 5000)
 
 seq_time=()
