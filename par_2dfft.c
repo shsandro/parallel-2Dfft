@@ -72,7 +72,7 @@ void par_2dfft(complex *sig, complex *f, int n, int rows) {
     }
 }
 
-void help_menu() {
+void help_menu(char *prog_name) {
     printf("Usage: %s [flags]\n", prog_name);
     printf("    -h               prints this usage guide\n");
     printf(
@@ -108,6 +108,11 @@ int main(int argc, char **argv) {
 
     /* ******************** master task ************************ */
     if (taskid == MASTER) {
+        if (argc == 1) {
+            help_menu(argv[0]);
+            exit(EXIT_SUCCESS);
+        }
+
         while ((ch = getopt(argc, argv, "n:h")) != -1) {
             switch (ch) {
                 case 'n':
@@ -117,7 +122,7 @@ int main(int argc, char **argv) {
 
                 case 'h':
                 default:
-                    help_menu();
+                    help_menu(argv[0]);
                     MPI_Finalize();
                     exit(1);
                     break;
@@ -182,8 +187,8 @@ int main(int argc, char **argv) {
         end_time = now();
 
         // for (int i = 0; i < total_size; i++) print_complex(sig[i]);
-        printf("Time elapsed: %lf\n",
-               (end_time_1 - start_time_1) + (end_time_2 - start_time_2));
+        // printf("Time elapsed: %lf\n",
+        //        (end_time_1 - start_time_1) + (end_time_2 - start_time_2));
         printf("Time elapsed with comms: %lf\n", (end_time - start_time));
     } else {
         /* ******************** worker task ************************ */

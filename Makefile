@@ -12,7 +12,7 @@ all: serial parallel
 serial: $(SERIAL_BIN)
 
 $(SERIAL_BIN): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(CFLAGS)
 
 $(OBJECTS): %: $(SRC)
 	$(CC) -c -Wall -o serial_2dfft.o serial_2dfft.c
@@ -23,7 +23,7 @@ $(SRC): $(INCLUDES)
 parallel: $(PARALLEL_BIN)
 
 $(PARALLEL_BIN): par_2dfft.c complex.c
-	$(MPI) $(CFLAGS) -o $@ $^
+	$(MPI) -o $@ $^ $(CFLAGS)
 
 complex.c: $(INCLUDES)
 

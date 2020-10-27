@@ -98,7 +98,7 @@ double now() {
     return current_time.tv_sec + (current_time.tv_nsec / ONE_BILLION);
 }
 
-void help_menu() {
+void help_menu(char *prog_name) {
     printf("Usage: %s [flags]\n", prog_name);
     printf("    -h               prints this usage guide\n");
     printf(
@@ -110,6 +110,11 @@ int main(int argc, char **argv) {
     complex *sig, *f, *f_seq;
     double start_time, end_time;
 
+    if (argc == 1) {
+        help_menu(argv[0]);
+        exit(EXIT_SUCCESS);
+    }
+
     while ((ch = getopt(argc, argv, "n:h")) != -1) {
         switch (ch) {
             case 'n':
@@ -118,8 +123,8 @@ int main(int argc, char **argv) {
 
             case 'h':
             default:
-                help_menu();
-                exit(1);
+                help_menu(argv[0]);
+                exit(EXIT_FAILURE);
                 break;
         }
     }
