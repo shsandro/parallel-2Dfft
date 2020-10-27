@@ -92,6 +92,11 @@ int main(int argc, char **argv) {
     double start_time_1, end_time_1, start_time_2, end_time_2, start_time,
         end_time;
 
+    double delta;
+    double reduced;
+    double delta_comms;
+    double reduced_comms;
+
     complex *sig, *f, *f_seq;
 
     MPI_Status status;
@@ -186,10 +191,22 @@ int main(int argc, char **argv) {
         }
         end_time = now();
 
+        delta = (end_time_1 - start_time_1) + (end_time_2 - start_time_2);
+        reduced = 0;
+
+        MPI_Reduce(&delta, &reduced, 1, MPI_DOUBLE, MPI_SUM, MASTER,
+                   MPI_COMM_WORLD);
+
+        delta_comms = end_time - start_time;
+        reduced_comms = 0;
+
+        MPI_Reduce(&delta_comms, &reduced_comms, 1, MPI_DOUBLE, MPI_SUM, MASTER,
+                   MPI_COMM_WORLD);
+
         // for (int i = 0; i < total_size; i++) print_complex(sig[i]);
         // printf("Time elapsed: %lf\n",
         //        (end_time_1 - start_time_1) + (end_time_2 - start_time_2));
-        printf("Time elapsed with comms: %lf\n", (end_time - start_time));
+        // printf("Time elapsed with comms: %lf\n", (end_time - start_time));
     } else {
         /* ******************** worker task ************************ */
         MPI_Recv(&n, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD, &status);
@@ -206,7 +223,10 @@ int main(int argc, char **argv) {
         MPI_Recv(sig, rows * n * 2, MPI_DOUBLE, MASTER, FROM_MASTER,
                  MPI_COMM_WORLD, &status);
 
+        start_time = now();
+        start_time_1 = now();
         par_2dfft(sig, f, n, rows);
+        end_time_1 = now();
 
         MPI_Send(f, rows * n * 2, MPI_DOUBLE, MASTER, FROM_WORKER,
                  MPI_COMM_WORLD);
@@ -214,10 +234,31 @@ int main(int argc, char **argv) {
         MPI_Recv(f, rows * n * 2, MPI_DOUBLE, MASTER, FROM_MASTER,
                  MPI_COMM_WORLD, &status);
 
+        start_time_2 = now();
         par_2dfft(f, sig, n, rows);
+        end_time_2 = now();
 
         MPI_Send(sig, rows * n * 2, MPI_DOUBLE, MASTER, FROM_WORKER,
                  MPI_COMM_WORLD);
+
+        end_time = now();
+
+        delta = (end_time_1 - start_time_1) + (end_time_2 - start_time_2);
+        reduced = 0;
+
+        MPI_Reduce(&delta, &reduced, 1, MPI_DOUBLE, MPI_SUM, MASTER,
+                   MPI_COMM_WORLD);
+
+        delta_comms = end_time - start_time;
+        reduced_comms = 0;
+
+        MPI_Reduce(&delta_comms, &reduced_comms, 1, MPI_DOUBLE, MPI_SUM, MASTER,
+                   MPI_COMM_WORLD);
+    }
+
+    if (taskid == MASTER) {
+        printf("Time elapsed   : %lf\n", reduced / numtasks);
+        printf("Time with comms: %lf\n", reduced_comms / numtasks);
     }
 
     MPI_Finalize();
