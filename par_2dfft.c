@@ -75,6 +75,7 @@ void par_2dfft(complex *sig, complex *f, int n, int rows) {
 void help_menu(char *prog_name) {
     printf("Usage: %s [flags]\n", prog_name);
     printf("    -h               prints this usage guide\n");
+    printf("    -o <file_name> name for the optional output file\n");
     printf(
         "    -n <number> generate random a matrix of size number x number\n");
 }
@@ -87,12 +88,13 @@ int main(int argc, char **argv) {
         n,             /* size of square matrix */
         rows_per_task, /* number of rows per each task */
         extra_rows,    /* extra rows  */
-        offset, ch, rows;
+        offset = 0, ch, rows, total_size;
 
     double start_time_1, end_time_1, start_time_2, end_time_2, start_time,
         end_time;
 
-    complex *sig, *f, *f_seq;
+    complex *sig, *f, *proccess_sig, *proccess_f;
+    FILE *output = NULL;
 
     MPI_Status status;
 
@@ -106,32 +108,43 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    /* ******************** master task ************************ */
+    while ((ch = getopt(argc, argv, "o:n:h")) != -1) {
+        switch (ch) {
+            case 'n':
+                n = atoi(optarg);
+
+                break;
+
+            case 'o':
+                output = fopen(optarg, "w");
+
+                break;
+
+            case 'h':
+            default:
+                help_menu(argv[0]);
+                MPI_Finalize();
+                exit(1);
+                break;
+        }
+    }
+
+    int offsets[numtasks];
+    int all_rows[numtasks];
+
+    rows_per_task = n / numtasks;
+    extra_rows = n % numtasks;
+    offset = 0;
+
+    for (int dest = 0; dest < numtasks; dest++) {
+        rows = (dest < extra_rows) ? rows_per_task + 1 : rows_per_task;
+        offsets[dest] = offset;
+        all_rows[dest] = rows * n * 2;
+        offset += all_rows[dest];
+    }
+
     if (taskid == MASTER) {
-        if (argc == 1) {
-            help_menu(argv[0]);
-            exit(EXIT_SUCCESS);
-        }
-
-        while ((ch = getopt(argc, argv, "n:h")) != -1) {
-            switch (ch) {
-                case 'n':
-                    n = atoi(optarg);
-
-                    break;
-
-                case 'h':
-                default:
-                    help_menu(argv[0]);
-                    MPI_Finalize();
-                    exit(1);
-                    break;
-            }
-        }
-
-        int total_size = n * n;
-        int offsets[numtasks];
-        int all_rows[numtasks];
+        total_size = n * n;
 
         sig = (complex *)calloc(sizeof(complex), (size_t)total_size);
         f = (complex *)calloc(sizeof(complex), (size_t)total_size);
@@ -141,83 +154,70 @@ int main(int argc, char **argv) {
             sig[i].b = 0;
         }
 
-        rows_per_task = n / numtasks;
-        extra_rows = n % numtasks;
-        offset = rows_per_task * n;
+        transpose(sig, n);  // First transpose
+    }
 
-        transpose(sig, n);
+    proccess_sig =
+        (complex *)calloc(sizeof(complex), (size_t)n * all_rows[taskid]);
+    proccess_f =
+        (complex *)calloc(sizeof(complex), (size_t)n * all_rows[taskid]);
 
-        start_time = now();
-        start_time_1 = now();
-        par_2dfft(sig, f, n, rows_per_task);
-        end_time_1 = now();
+    start_time = now();
+    MPI_Scatterv(sig, all_rows, offsets, MPI_DOUBLE, proccess_sig,
+                 all_rows[taskid], MPI_DOUBLE, MASTER, MPI_COMM_WORLD);
 
-        for (int dest = 1; dest < numtasks; dest++) {
-            rows = (dest <= extra_rows) ? rows_per_task + 1 : rows_per_task;
-            MPI_Send(&n, 1, MPI_INT, dest, FROM_MASTER, MPI_COMM_WORLD);
-            MPI_Send(&offset, 1, MPI_INT, dest, FROM_MASTER, MPI_COMM_WORLD);
-            MPI_Send(&rows, 1, MPI_INT, dest, FROM_MASTER, MPI_COMM_WORLD);
-            MPI_Send(sig + offset, rows * n * 2, MPI_DOUBLE, dest, FROM_MASTER,
-                     MPI_COMM_WORLD);
-            offsets[dest] = offset;
-            all_rows[dest] = rows;
-            offset += (rows * n);
-        }
+    start_time_1 = now();
+    par_2dfft(proccess_sig, proccess_f, n, all_rows[taskid] / 2);
+    end_time_1 = now();
 
-        for (int source = 1; source < numtasks; source++) {
-            MPI_Recv(f + offsets[source], all_rows[source] * n * 2, MPI_DOUBLE,
-                     source, FROM_WORKER, MPI_COMM_WORLD, &status);
-        }
+    MPI_Gatherv(proccess_f, all_rows[taskid], MPI_DOUBLE, f, all_rows, offsets,
+                MPI_DOUBLE, MASTER,
+                MPI_COMM_WORLD);  // proccess_f to f
 
+    if (taskid == MASTER) {
         transpose(f, n);
+    }
 
-        start_time_2 = now();
-        par_2dfft(f, sig, n, rows_per_task);
-        end_time_2 = now();
+    MPI_Scatterv(f, all_rows, offsets, MPI_DOUBLE, proccess_f, all_rows[taskid],
+                 MPI_DOUBLE, MASTER, MPI_COMM_WORLD);
 
-        for (int dest = 1; dest < numtasks; dest++) {
-            MPI_Send(f + offsets[dest], all_rows[dest] * n * 2, MPI_DOUBLE,
-                     dest, FROM_MASTER, MPI_COMM_WORLD);
+    start_time_2 = now();
+    par_2dfft(proccess_f, proccess_sig, n, all_rows[taskid] / 2);
+    end_time_2 = now();
+
+    MPI_Gatherv(proccess_sig, all_rows[taskid], MPI_DOUBLE, sig, all_rows,
+                offsets, MPI_DOUBLE, MASTER,
+                MPI_COMM_WORLD);  // process_sig to sig
+
+    end_time = now();
+
+    double delta = (end_time_1 - start_time_1) + (end_time_2 - start_time_2);
+    double reduced = 0;
+
+    MPI_Reduce(&delta, &reduced, 1, MPI_DOUBLE, MPI_SUM, MASTER,
+               MPI_COMM_WORLD);
+
+    double delta_comms = end_time - start_time;
+    double reduced_comms = 0;
+
+    MPI_Reduce(&delta_comms, &reduced_comms, 1, MPI_DOUBLE, MPI_SUM, MASTER,
+               MPI_COMM_WORLD);
+
+    if (taskid == MASTER) {
+        printf("Time elapsed   : %lf\n", reduced / numtasks);
+        printf("Time with comms: %lf\n", reduced_comms / numtasks);
+
+        if (output != NULL) {
+            complex(*par_sig)[n] = sig;
+
+            for (int i = 0; i < n; i++) {
+                fprintf(output, "[ ");
+                for (int j = 0; j < n; j++) {
+                    print_complex(par_sig[i][j], output);
+                }
+                fprintf(output, "]\n");
+            }
         }
-
-        for (int source = 1; source < numtasks; source++) {
-            MPI_Recv(sig + offsets[source], all_rows[source] * n * 2,
-                     MPI_DOUBLE, source, FROM_WORKER, MPI_COMM_WORLD, &status);
-        }
-        end_time = now();
-
-        // for (int i = 0; i < total_size; i++) print_complex(sig[i]);
-        // printf("Time elapsed: %lf\n",
-        //        (end_time_1 - start_time_1) + (end_time_2 - start_time_2));
-        printf("Time elapsed with comms: %lf\n", (end_time - start_time));
-    } else {
-        /* ******************** worker task ************************ */
-        MPI_Recv(&n, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD, &status);
-
-        MPI_Recv(&offset, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD,
-                 &status);
-
-        MPI_Recv(&rows, 1, MPI_INT, MASTER, FROM_MASTER, MPI_COMM_WORLD,
-                 &status);
-
-        sig = (complex *)calloc(sizeof(complex), (size_t)n * rows);
-        f = (complex *)calloc(sizeof(complex), (size_t)n * rows);
-
-        MPI_Recv(sig, rows * n * 2, MPI_DOUBLE, MASTER, FROM_MASTER,
-                 MPI_COMM_WORLD, &status);
-
-        par_2dfft(sig, f, n, rows);
-
-        MPI_Send(f, rows * n * 2, MPI_DOUBLE, MASTER, FROM_WORKER,
-                 MPI_COMM_WORLD);
-
-        MPI_Recv(f, rows * n * 2, MPI_DOUBLE, MASTER, FROM_MASTER,
-                 MPI_COMM_WORLD, &status);
-
-        par_2dfft(f, sig, n, rows);
-
-        MPI_Send(sig, rows * n * 2, MPI_DOUBLE, MASTER, FROM_WORKER,
-                 MPI_COMM_WORLD);
     }
 
     MPI_Finalize();

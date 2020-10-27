@@ -65,4 +65,6 @@ Description: prints a complex number
 Input: complex number z = a +bi
 Result: prints z in the format a + bi
 */
-void print_complex(complex z) { printf("%.6f + %.6f i\n", z.a, z.b); }
+void print_complex(complex z, FILE* output) {
+    fprintf(output, "{% 15.5f%+15.5fi} ", z.a, z.b);
+}

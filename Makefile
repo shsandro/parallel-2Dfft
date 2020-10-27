@@ -1,6 +1,6 @@
 CC=gcc
 MPI=mpicc
-CFLAGS=-lm
+CFLAGS=-lm -Wno-incompatible-pointer-types
 SERIAL_BIN=seq_2dfft.out
 PARALLEL_BIN=par_2dfft.out
 SRC=serial_2dfft.c complex.c
@@ -15,8 +15,8 @@ $(SERIAL_BIN): $(OBJECTS)
 	$(CC) -o $@ $^ $(CFLAGS)
 
 $(OBJECTS): %: $(SRC)
-	$(CC) -c -Wall -o serial_2dfft.o serial_2dfft.c
-	$(CC) -c -Wall -o complex.o complex.c
+	$(CC) -c -o serial_2dfft.o serial_2dfft.c $(CFLAGS)
+	$(CC) -c -o complex.o complex.c $(CFLAGS)
 
 $(SRC): $(INCLUDES)
 

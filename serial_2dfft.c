@@ -101,6 +101,7 @@ double now() {
 void help_menu(char *prog_name) {
     printf("Usage: %s [flags]\n", prog_name);
     printf("    -h               prints this usage guide\n");
+    printf("    -o <file_name> name for the optional output file\n");
     printf(
         "    -n <number> generate random a matrix of size number x number\n");
 }
@@ -109,22 +110,29 @@ int main(int argc, char **argv) {
     int n, k, ch;
     complex *sig, *f, *f_seq;
     double start_time, end_time;
+    FILE *output = NULL;
 
     if (argc == 1) {
         help_menu(argv[0]);
         exit(EXIT_SUCCESS);
     }
 
-    while ((ch = getopt(argc, argv, "n:h")) != -1) {
+    while ((ch = getopt(argc, argv, "o:n:h")) != -1) {
         switch (ch) {
             case 'n':
                 n = atoi(optarg);
+
+                break;
+
+            case 'o':
+                output = fopen(optarg, "w");
+
                 break;
 
             case 'h':
             default:
                 help_menu(argv[0]);
-                exit(EXIT_FAILURE);
+                exit(1);
                 break;
         }
     }
@@ -141,7 +149,17 @@ int main(int argc, char **argv) {
     _2dfft(sig, f, n);
     end_time = now();
 
-    // for (int i = 0; i < total_size; i++) print_complex(sig[i]);
+    if (output != NULL) {
+        complex(*par_sig)[n] = sig;
+
+        for (int i = 0; i < n; i++) {
+            fprintf(output, "[ ");
+            for (int j = 0; j < n; j++) {
+                print_complex(par_sig[i][j], output);
+            }
+            fprintf(output, "]\n");
+        }
+    }
 
     printf("Time elapsed: %lf\n", end_time - start_time);
 

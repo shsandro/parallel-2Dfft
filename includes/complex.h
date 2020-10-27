@@ -1,6 +1,8 @@
 #ifndef COMPLEX_H
 #define COMPLEX_H
 
+#include <stdio.h>
+
 /* const double PI */
 #define PI 3.141592653589793
 
@@ -61,6 +63,6 @@ Description: prints a complex number
 Input: complex number z = a +bi
 Result: prints z in the format a + bi
 */
-void print_complex(complex z);
+void print_complex(complex z, FILE* output);
 
 #endif
