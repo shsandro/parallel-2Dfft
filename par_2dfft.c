@@ -158,16 +158,16 @@ int main(int argc, char **argv) {
     }
 
     proccess_sig =
-        (complex *)calloc(sizeof(complex), (size_t)n * (all_rows[taskid]/2));
+        (complex *)calloc(sizeof(complex), (size_t)all_rows[taskid]/2);
     proccess_f =
-        (complex *)calloc(sizeof(complex), (size_t)n * (all_rows[taskid]/2));
+        (complex *)calloc(sizeof(complex), (size_t)all_rows[taskid]/2);
 
     start_time = now();
     MPI_Scatterv(sig, all_rows, offsets, MPI_DOUBLE, proccess_sig,
                  all_rows[taskid], MPI_DOUBLE, MASTER, MPI_COMM_WORLD);
 
     start_time_1 = now();
-    par_2dfft(proccess_sig, proccess_f, n, all_rows[taskid] / 2);
+    par_2dfft(proccess_sig, proccess_f, n, (all_rows[taskid] / 2) / n);
     end_time_1 = now();
 
     MPI_Gatherv(proccess_f, all_rows[taskid], MPI_DOUBLE, f, all_rows, offsets,
@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
                  MPI_DOUBLE, MASTER, MPI_COMM_WORLD);
 
     start_time_2 = now();
-    par_2dfft(proccess_f, proccess_sig, n, all_rows[taskid] / 2);
+    par_2dfft(proccess_f, proccess_sig, n, (all_rows[taskid] / 2) / n);
     end_time_2 = now();
 
     MPI_Gatherv(proccess_sig, all_rows[taskid], MPI_DOUBLE, sig, all_rows,
