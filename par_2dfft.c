@@ -158,9 +158,9 @@ int main(int argc, char **argv) {
     }
 
     proccess_sig =
-        (complex *)calloc(sizeof(complex), (size_t)n * all_rows[taskid]);
+        (complex *)calloc(sizeof(complex), (size_t)n * (all_rows[taskid]/2));
     proccess_f =
-        (complex *)calloc(sizeof(complex), (size_t)n * all_rows[taskid]);
+        (complex *)calloc(sizeof(complex), (size_t)n * (all_rows[taskid]/2));
 
     start_time = now();
     MPI_Scatterv(sig, all_rows, offsets, MPI_DOUBLE, proccess_sig,
