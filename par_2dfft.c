@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
         offset = 0, ch, rows, total_size;
 
     double start_time_1, end_time_1, start_time_2, end_time_2, start_time,
-        end_time;
+        start_time_3, end_time_3, end_time;
 
     complex *sig, *f, *proccess_sig, *proccess_f;
     FILE *output = NULL;
@@ -158,11 +158,12 @@ int main(int argc, char **argv) {
     }
 
     proccess_sig =
-        (complex *)calloc(sizeof(complex), (size_t)all_rows[taskid]/2);
+        (complex *)calloc(sizeof(complex), (size_t)all_rows[taskid] / 2);
     proccess_f =
-        (complex *)calloc(sizeof(complex), (size_t)all_rows[taskid]/2);
+        (complex *)calloc(sizeof(complex), (size_t)all_rows[taskid] / 2);
 
-    start_time = now();
+    if (taskid == MASTER) start_time = now();
+
     MPI_Scatterv(sig, all_rows, offsets, MPI_DOUBLE, proccess_sig,
                  all_rows[taskid], MPI_DOUBLE, MASTER, MPI_COMM_WORLD);
 
@@ -175,7 +176,9 @@ int main(int argc, char **argv) {
                 MPI_COMM_WORLD);  // proccess_f to f
 
     if (taskid == MASTER) {
+        start_time_3 = now();
         transpose(f, n);
+        end_time_3 = now();
     }
 
     MPI_Scatterv(f, all_rows, offsets, MPI_DOUBLE, proccess_f, all_rows[taskid],
@@ -189,7 +192,7 @@ int main(int argc, char **argv) {
                 offsets, MPI_DOUBLE, MASTER,
                 MPI_COMM_WORLD);  // process_sig to sig
 
-    end_time = now();
+    if (taskid == MASTER) end_time = now();
 
     double delta = (end_time_1 - start_time_1) + (end_time_2 - start_time_2);
     double reduced = 0;
@@ -197,15 +200,10 @@ int main(int argc, char **argv) {
     MPI_Reduce(&delta, &reduced, 1, MPI_DOUBLE, MPI_SUM, MASTER,
                MPI_COMM_WORLD);
 
-    double delta_comms = end_time - start_time;
-    double reduced_comms = 0;
-
-    MPI_Reduce(&delta_comms, &reduced_comms, 1, MPI_DOUBLE, MPI_SUM, MASTER,
-               MPI_COMM_WORLD);
-
     if (taskid == MASTER) {
-        printf("Time elapsed   : %lf\n", reduced / numtasks);
-        printf("Time with comms: %lf\n", reduced_comms / numtasks);
+        printf("Time elapsed   : %lf\n",
+               (reduced / numtasks) + (end_time_3 - start_time_3));
+        printf("Time with comms: %lf\n", end_time - start_time);
 
         if (output != NULL) {
             complex(*par_sig)[n] = sig;
