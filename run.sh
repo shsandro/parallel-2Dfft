@@ -38,18 +38,14 @@ for size in ${sizes[@]}; do
     echo "Size ${size}"
     ./${seq_executable} -n ${size} > /dev/null
     for i in $(eval echo "{1..$n_repeticoes}"); do
-        seq_time+=$(./${seq_executable} -n ${size} | grep "Time elapsed" | grep -Eo "?([0-9]*[.])?[0-9]+")
-        par_run=$(mpirun --host ${HOSTNAME}:${n_processes} ./${par_executable} -n ${size})
+        seq_time+=($(./${seq_executable} -n ${size} | grep "Time elapsed" | grep -Eo "?([0-9]*[.])?[0-9]+"))
+        par_run=$(sudo perf stat -o output/perf_${size}_${n_processes}_${i} -B -e cache-references,cache-misses,cycles,instructions,branches,branch-misses,faults mpirun --host ${HOSTNAME}:${n_processes} ./${par_executable} -n ${size})
         par_time+=($(echo -e ${par_run} | grep "Time elapsed" | grep -Eo "?([0-9]*[.])?[0-9]+" | head -n1))
         par_time_comms+=($(echo -e ${par_run} | grep "Time with comms" | grep -Eo "?([0-9]*[.])?[0-9]+" | tail -n1))
     done
 
     python3 speedup.py $size $n_processes ${n_repeticoes} ${seq_time[@]} ${par_time[@]} > output/speedup${n_processes}_size_${size}
     python3 speedup.py $size $n_processes ${n_repeticoes} ${seq_time[@]} ${par_time_comms[@]} > output/speedup_comm${n_processes}_size_${size}
-
-    echo ${seq_time[@]} > output/seq_times_${n_processes}_${size}
-    echo ${par_time[@]} > output/par_times_${n_processes}_${size}
-    echo ${par_time_comms[@]} > output/par_times_comms_${n_processes}_${size}
 
     seq_time=()
     par_time=()
