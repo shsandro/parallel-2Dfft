@@ -49,4 +49,5 @@ for size in ${sizes[@]}; do
 
     seq_time=()
     par_time=()
+    par_time_comms=()
 done 
