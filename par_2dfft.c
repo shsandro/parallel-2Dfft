@@ -89,8 +89,8 @@ int main(int argc, char **argv) {
         extra_rows,    /* extra rows  */
         offset, ch, rows;
 
-    double start_time_1, end_time_1, start_time_2, end_time_2, start_time,
-        end_time;
+    double start_time_1, end_time_1, start_time_2, end_time_2, start_time_3,
+        end_time_3, start_time, end_time;
 
     double delta;
     double reduced;
@@ -174,7 +174,9 @@ int main(int argc, char **argv) {
                      source, FROM_WORKER, MPI_COMM_WORLD, &status);
         }
 
+        start_time_3 = now();
         transpose(f, n);
+        end_time_3 = now();
 
         start_time_2 = now();
         par_2dfft(f, sig, n, rows_per_task);
@@ -257,7 +259,8 @@ int main(int argc, char **argv) {
     }
 
     if (taskid == MASTER) {
-        printf("Time elapsed   : %lf\n", reduced / numtasks);
+        printf("Time elapsed   : %lf\n",
+               (reduced / numtasks) + end_time_3 - start_time_3);
         printf("Time with comms: %lf\n", reduced_comms / numtasks);
     }
 
